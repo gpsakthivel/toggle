@@ -137,3 +137,124 @@ WHERE name = 'Tokyo';
 
 --- Delete the record for Tokyo
 DELETE FROM cities WHERE name = 'Tokyo';
+
+
+-- ============================================================
+-- SQL JOINS
+-- ============================================================
+-- Joins combine rows from two or more tables based on a
+-- related column between them.
+--
+-- Types of JOINs:
+--   INNER JOIN  – rows with matching values in BOTH tables
+--   LEFT JOIN   – all rows from left table + matched right rows
+--   RIGHT JOIN  – all rows from right table + matched left rows
+--   FULL JOIN   – all rows from both tables (matched or not)
+-- ============================================================
+
+-- Setup: create two related tables
+CREATE TABLE users (
+  id       SERIAL PRIMARY KEY,
+  username VARCHAR(50)
+);
+
+CREATE TABLE photos (
+  id      SERIAL PRIMARY KEY,
+  url     VARCHAR(200),
+  user_id INTEGER REFERENCES users(id)
+);
+
+-- Insert users (user_id 4 will have no photos)
+INSERT INTO users (username) VALUES
+  ('Alice'),
+  ('Bob'),
+  ('Carol'),
+  ('Dave');
+
+-- Insert photos (no photo is associated with user_id 4 / Dave)
+-- photo_id 5 has a NULL user_id (orphaned photo)
+INSERT INTO photos (url, user_id) VALUES
+  ('https://img.example.com/alice1.jpg', 1),
+  ('https://img.example.com/alice2.jpg', 1),
+  ('https://img.example.com/bob1.jpg',   2),
+  ('https://img.example.com/carol1.jpg', 3),
+  ('https://img.example.com/orphan.jpg', NULL);
+
+-- -------------------------------------------------------
+-- INNER JOIN
+-- Returns only rows where there is a match in BOTH tables.
+-- Dave (user_id 4) and the orphaned photo are excluded.
+-- -------------------------------------------------------
+SELECT
+  users.username,
+  photos.url
+FROM
+  users
+INNER JOIN photos ON photos.user_id = users.id;
+
+-- -------------------------------------------------------
+-- LEFT JOIN (LEFT OUTER JOIN)
+-- Returns ALL rows from the left table (users), and the
+-- matched rows from the right table (photos).
+-- Dave appears with NULL for photo columns because he has
+-- no photos.
+-- -------------------------------------------------------
+SELECT
+  users.username,
+  photos.url
+FROM
+  users
+LEFT JOIN photos ON photos.user_id = users.id;
+
+-- -------------------------------------------------------
+-- RIGHT JOIN (RIGHT OUTER JOIN)
+-- Returns ALL rows from the right table (photos), and the
+-- matched rows from the left table (users).
+-- The orphaned photo appears with NULL for username.
+-- -------------------------------------------------------
+SELECT
+  users.username,
+  photos.url
+FROM
+  users
+RIGHT JOIN photos ON photos.user_id = users.id;
+
+-- -------------------------------------------------------
+-- FULL JOIN (FULL OUTER JOIN)
+-- Returns ALL rows from both tables.
+-- Dave (no photos) and the orphaned photo (no user) both
+-- appear with NULLs for the unmatched side.
+-- -------------------------------------------------------
+SELECT
+  users.username,
+  photos.url
+FROM
+  users
+FULL JOIN photos ON photos.user_id = users.id;
+
+-- -------------------------------------------------------
+-- Practical example: find users who have NO photos
+-- Use a LEFT JOIN and filter where the right side is NULL.
+-- -------------------------------------------------------
+SELECT
+  users.username
+FROM
+  users
+LEFT JOIN photos ON photos.user_id = users.id
+WHERE
+  photos.id IS NULL;
+
+-- -------------------------------------------------------
+-- Practical example: count photos per user (including
+-- users with zero photos using LEFT JOIN + GROUP BY)
+-- -------------------------------------------------------
+SELECT
+  users.username,
+  COUNT(photos.id) AS photo_count
+FROM
+  users
+LEFT JOIN photos ON photos.user_id = users.id
+GROUP BY
+  users.username
+ORDER BY
+  photo_count DESC;
